@@ -1,0 +1,71 @@
+name: 'tflocal deploy'
+description: 'Deploys terraform on LocalStack.'
+author: 'LocalStack Team'
+
+branding:
+  icon: 'code'
+  color: 'white'
+
+inputs:
+  path:
+    description: 'Path to terraform directory'
+    required: false
+    default: 'terraform'
+  github-token:
+    description: 'GitHub token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - id: tf-init
+      working-directory: ${{ inputs.path }}
+      run: |
+        tflocal init
+      shell: bash
+
+    - id: tf-deploy
+      working-directory: ${{ inputs.path }}
+      run: |
+        tflocal apply --auto-approve
+      shell: bash
+      continue-on-error: true
+
+    - id: pr-comment
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const tfDeploymentStatus = "${{ steps.tf-deploy.outcome }}"
+          let message
+          if (tfDeploymentStatus === 'success') {
+            message = `
+            ## LocalStack Terraform Deployment
+
+            | Deployment Status | Notes |
+            |:---|:---|
+            | ![LocalStack](https://img.shields.io/badge/LocalStack-Passed-green) | Successfully deployed the changes on [**LocalStack**](https://localstack.cloud) ✅ |
+
+            🔍  See more information about LocalStack github action [here](https://github.com/macnev2013/github-actions-localstack).
+            `
+          } else {
+            message = `
+            ## LocalStack Terraform Deployment
+
+            | Deployment Status | Notes |
+            |:---|:---|
+            | ![LocalStack](https://img.shields.io/badge/LocalStack-Failed-red) | Failed to deploy the changes on [**LocalStack**](https://localstack.cloud) ❌ |
+
+            🔍  See more information about LocalStack github action [here](https://github.com/macnev2013/github-actions-localstack).
+            `
+          }
+
+          const issue_number = context.issue.number;
+          const repo = context.repo;
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          })
+      if: ${{ github.event_name == 'pull_request' }}

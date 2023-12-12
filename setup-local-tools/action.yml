@@ -1,0 +1,57 @@
+name: 'Setup Local Tools'
+description: 'Sets up Local Tools in your GitHub Actions workflow.'
+author: 'LocalStack Team'
+
+branding:
+  icon: 'code'
+  color: 'white'
+
+inputs:
+  awslocal:
+    description: 'Sets up awslocal'
+    required: false
+    default: 'false'
+
+  terraform:
+    description: 'Sets up terraform'
+    required: false
+    default: 'false'
+  terraform-version:
+    description: 'Sets up terraform-version'
+    required: false
+    default: 'latest'
+  terraform-cli_config_credentials_hostname:
+    description: 'The hostname of a Terraform Cloud/Enterprise instance to place within the credentials block of the Terraform CLI configuration file. Defaults to `app.terraform.io`.'
+    default: 'app.terraform.io'
+    required: false
+  terraform-cli_config_credentials_token:
+    description: 'The API token for a Terraform Cloud/Enterprise instance to place within the credentials block of the Terraform CLI configuration file.'
+    required: false
+  terraform_wrapper:
+    description: 'Whether or not to install a wrapper to wrap subsequent calls of the `terraform` binary and expose its STDOUT, STDERR, and exit code as outputs named `stdout`, `stderr`, and `exitcode` respectively. Defaults to `true`.'
+    default: 'true'
+    required: false
+
+  tflocal:
+    description: 'Sets up terraform-local'
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - run: ./setup-local-tools/setup-awslocal.sh
+      if: ${{ inputs.awslocal == 'true' }}
+      shell: bash
+
+    - uses: hashicorp/setup-terraform@v2
+      if: ${{ inputs.terraform == 'true' }}
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        cli_config_credentials_hostname: ${{ inputs.terraform-cli_config_credentials_hostname }}
+        cli_config_credentials_token: ${{ inputs.terraform-cli_config_credentials_token }}
+        terraform_wrapper: ${{ inputs.terraform_wrapper }}
+
+    - run: ./setup-local-tools/setup-tflocal.sh
+      if: ${{ inputs.tflocal == 'true' }}
+      shell: bash

@@ -1,0 +1,29 @@
+name: Setup LocalStack
+on: [ pull_request ]
+
+jobs:
+  setup-localstack-action-test:
+    name: 'Test Setup LocalStack GitHub Action'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup LocalStack
+        uses: ./setup-localstack
+        with:
+          image-tag: 'latest'
+          configuration: 'DEBUG=1 DEFAULT_REGION=eu-central-1'
+          use-pro: 'true'
+        env:
+          LOCALSTACK_API_KEY: ${{ secrets.LOCALSTACK_API_KEY }}
+
+      - name: Setup awslocal
+        uses: ./setup-local-tools
+        with:
+          awslocal: 'true'
+
+      - name: Run Tests against LocalStack
+        run: |
+          awslocal s3 mb s3://test
+          awslocal s3 ls
+          echo "Test Execution complete!"
